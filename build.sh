@@ -12,7 +12,7 @@ build_start_time=`date +%H:%M:%S`
 tos.py version
 tos.py check
 
-cd apps/tuya_cloud/switch_demo
+cd apps/tuya_cloud/01_i2c
 echo 9 | tos.py config choice
 
 tos.py build

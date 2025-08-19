@@ -203,13 +203,22 @@ static OPERATE_RET __bh1750_read_data(const uint8_t port, const uint16_t len, ui
 //     return tkl_i2c_master_send(port, SR_I2C_ADDR_BH1750_A, buf, 2, FALSE);
 // }
 
+// static OPERATE_RET __bh1750_write_cmd(const uint8_t port, const uint16_t cmd)
+// {
+//     uint8_t buf[2];
+//     buf[0] = (uint8_t)(cmd & 0xFF);
+//     buf[1] = (uint8_t)(cmd & 0xFF);
+
+//     return tkl_i2c_master_send(port, SR_I2C_ADDR_BH1750_A, buf, 1, FALSE);
+// }
+
 static OPERATE_RET __bh1750_write_cmd(const uint8_t port, const uint16_t cmd)
 {
-    uint8_t buf[2];
-    buf[0] = (uint8_t)(cmd & 0x00FF);
-    buf[1] = (uint8_t)(cmd & 0x00FF);
+    uint8_t cmd_bytes[2];
+    cmd_bytes[0] = (uint8_t)(cmd >> 8);
+    cmd_bytes[1] = (uint8_t)(cmd & 0x00FF);
 
-    return tkl_i2c_master_send(port, SR_I2C_ADDR_BH1750_A, buf, 1, FALSE);
+    return tkl_i2c_master_send(port, SR_I2C_ADDR_BH1750_A, cmd_bytes, 2, FALSE);
 }
 
 // /**
@@ -241,27 +250,51 @@ static OPERATE_RET __bh1750_write_cmd(const uint8_t port, const uint16_t cmd)
  *
  * @return OPRT_OK on success, others on error
  */
-OPERATE_RET bh1750_read_temp_humi(int port, uint16_t *light)
+OPERATE_RET bh1750_read_light(int port, uint16_t *light)
 {
     uint8_t buf[6] = {0};
     OPERATE_RET ret = OPRT_OK;
 
+    PR_ERR("0. enable");
     // reset
-    __bh1750_write_cmd(port, BH1750_CMD_SOFT_RESET);
+    ret = __bh1750_write_cmd(port, BH1750_CMD_POWER_ON);
+    if(ret != OPRT_OK)
+        return ret;
+    __bh1750_delay_ms(50);
 
+    PR_ERR("1. reset");
+    // reset
+    ret = __bh1750_write_cmd(port, BH1750_CMD_SOFT_RESET);
+    if(ret != OPRT_OK)
+        return ret;
+    __bh1750_delay_ms(50);
+
+    PR_ERR("2. set mode");
     // set mode
     // __bh1750_write_cmd(port, dev->info[BH1750_RSRC_INDEX_MODE]);
     // __bh1750_start_periodic_measurement(port);
-    __bh1750_write_cmd(port, BH1750_CMD_ONE_H_RES_MODE);
+    ret = __bh1750_write_cmd(port, BH1750_CMD_ONE_H_RES_MODE);
+    if(ret != OPRT_OK)
+        return ret;
 
     // delay -- wait value return
-    __bh1750_delay_ms(180);
+    __bh1750_delay_ms(300);
 
+    PR_ERR("3. read");
     ret = __bh1750_read_data(port, 2, buf); 
     if(ret != OPRT_OK)
         return ret;
 
     *light = ((uint16_t)buf[0] << 8) | buf[1];
 
-    return OPRT_OK;
+    return ret;
 }
+
+// OPERATE_RET bh1750_init(int port)
+// {
+//     uint8_t buf[6] = {0};
+//     OPERATE_RET ret = OPRT_OK;
+
+
+//     return ret;
+// }

@@ -50,8 +50,6 @@ static void __example_i2c_task(void *param)
 
     tal_log_init(TAL_LOG_LEVEL_DEBUG, 1024, (TAL_LOG_OUTPUT_CB)tkl_log_output);
 
-    tkl_log_open();
-
     PR_NOTICE("Application information:");
     PR_NOTICE("Project name:        %s", PROJECT_NAME);
     PR_NOTICE("App version:         %s", PROJECT_VERSION);
@@ -79,7 +77,7 @@ static void __example_i2c_task(void *param)
 
     while (1) {
         PR_DEBUG("cnt is %d", cnt++);
-        tal_system_sleep(5000);
+        tal_system_sleep(1000);
 
 #if (I2C_EXAMPLE_SENSOR_TYPE == I2C_SENSOR_BH1750)
         uint16_t light = 0;
@@ -90,7 +88,7 @@ static void __example_i2c_task(void *param)
             PR_ERR("bh1750 read fail, err<%d>!", op_ret);
             continue;
         }
-        PR_INFO("bh1750 light:%d.%d", light / 1000, light % 1000);
+        PR_INFO("bh1750 light:%d.%d\n", light / 1000, light % 1000);
 // #elif (I2C_EXAMPLE_SENSOR_TYPE == I2C_SENSOR_SHT4X)
 
 #endif
@@ -106,8 +104,6 @@ static void user_main(void)
 {
     OPERATE_RET rt = OPRT_OK;
     tal_log_init(TAL_LOG_LEVEL_DEBUG, 1024, (TAL_LOG_OUTPUT_CB)tkl_log_output);
-
-    // tkl_log_open();
 
     PR_DEBUG("hello world\r\n");
 

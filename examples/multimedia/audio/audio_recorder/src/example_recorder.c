@@ -38,7 +38,7 @@
 #define USE_RING_BUFFER      0
 #define USE_INTERNAL_FLASH   1 // Store recording file in internal flash
 #define USE_SD_CARD          2
-#define RECORDER_FILE_SOURCE USE_RING_BUFFER
+#define RECORDER_FILE_SOURCE USE_SD_CARD
 
 #if (RECORDER_FILE_SOURCE == USE_INTERNAL_FLASH)
 #define RECORDER_FILE_DIR      "/"
@@ -343,7 +343,7 @@ static OPERATE_RET app_pcm_to_wav(char *pcm_file)
         return rt;
     }
 
-    TAL_PR_HEXDUMP_DEBUG("wav head", head, WAV_HEAD_LEN);
+    PR_HEXDUMP_DEBUG("wav head", head, WAV_HEAD_LEN);
 
     // Create wav file
     TUYA_FILE wav_hdl = tkl_fopen(RECORDER_WAV_FILE_PATH, "w");
@@ -357,12 +357,14 @@ static OPERATE_RET app_pcm_to_wav(char *pcm_file)
     tkl_fwrite(head, WAV_HEAD_LEN, wav_hdl);
 
     // Read pcm file
-    char *read_buf = tkl_system_psram_malloc(PCM_FRAME_SIZE);
+    char *read_buf = NULL;
     if (NULL == read_buf) {
         PR_ERR("tkl_system_psram_malloc failed");
         // return OPRT_COM_ERROR;
         rt = OPRT_MALLOC_FAILED;
         goto __EXIT;
+    } else {
+        read_buf = tkl_system_psram_malloc(PCM_FRAME_SIZE);
     }
 
     PR_DEBUG("pcm file len %d", pcm_len);

@@ -98,12 +98,15 @@ struct recorder_ctx sg_recorder_ctx = {
     .file_hdl = NULL,
 };
 
+int flag_status = 0;
+
 /***********************************************************
 ***********************function define**********************
 ***********************************************************/
 static void app_audio_trigger_pin_init(void)
 {
     OPERATE_RET rt = OPRT_OK;
+    PR_DEBUG("%s", __func__);
 
     TUYA_GPIO_BASE_CFG_T pin_cfg = {
         .mode = TUYA_GPIO_PULLUP,
@@ -119,7 +122,36 @@ static BOOL_T audio_trigger_pin_is_pressed(void)
 {
     TUYA_GPIO_LEVEL_E level = TUYA_GPIO_LEVEL_HIGH;
     tkl_gpio_read(AUDIO_TRIGGER_PIN, &level);
-    return (level == TUYA_GPIO_LEVEL_LOW) ? TRUE : FALSE;
+
+    if (level == TUYA_GPIO_LEVEL_LOW){
+        PR_DEBUG("TUYA_GPIO_LEVEL_LOW");
+        tal_system_sleep(1000);
+
+        flag_status += 1;
+        if(flag_status == 3)
+            flag_status = 0;
+
+        switch (flag_status)
+        {
+        case 0:
+            PR_DEBUG("Flag waitting");
+            break;
+        case 1:
+            PR_DEBUG("Flag start record");
+            break;
+        case 2:
+            PR_DEBUG("Flag end record");
+            break;
+        default:
+            PR_DEBUG("Flag waitting");
+            break;
+        }
+
+        return TRUE;
+    } else {
+        // PR_DEBUG("TUYA_GPIO_LEVEL_HIGH");
+        return FALSE;
+    }
 }
 
 static int _audio_frame_put(TKL_AUDIO_FRAME_INFO_T *pframe)
@@ -139,6 +171,8 @@ static int _audio_frame_put(TKL_AUDIO_FRAME_INFO_T *pframe)
 static void app_audio_init(void)
 {
     TKL_AUDIO_CONFIG_T config;
+
+    PR_DEBUG("%s", __func__);
 
     memset(&config, 0, sizeof(TKL_AUDIO_CONFIG_T));
 
@@ -347,6 +381,8 @@ static OPERATE_RET app_pcm_to_wav(char *pcm_file)
 
     // Create wav file
     TUYA_FILE wav_hdl = tkl_fopen(RECORDER_WAV_FILE_PATH, "w");
+    char *read_buf = tkl_system_psram_malloc(PCM_FRAME_SIZE);
+
     if (NULL == wav_hdl) {
         PR_ERR("open file: %s failed", RECORDER_WAV_FILE_PATH);
         rt = OPRT_FILE_OPEN_FAILED;
@@ -357,14 +393,12 @@ static OPERATE_RET app_pcm_to_wav(char *pcm_file)
     tkl_fwrite(head, WAV_HEAD_LEN, wav_hdl);
 
     // Read pcm file
-    char *read_buf = NULL;
+
     if (NULL == read_buf) {
         PR_ERR("tkl_system_psram_malloc failed");
         // return OPRT_COM_ERROR;
         rt = OPRT_MALLOC_FAILED;
         goto __EXIT;
-    } else {
-        read_buf = tkl_system_psram_malloc(PCM_FRAME_SIZE);
     }
 
     PR_DEBUG("pcm file len %d", pcm_len);
@@ -412,14 +446,21 @@ static void app_recorder_thread(void *arg)
 {
     OPERATE_RET rt = OPRT_OK;
 
+    PR_DEBUG("%s", __func__);
+
     app_audio_trigger_pin_init();
     app_audio_init();
 
-    for (;;) {
-        app_mic_record();
+    PR_DEBUG("%s start for", __func__);
 
-        if (FALSE == audio_trigger_pin_is_pressed()) {
+    for (;;) {
+        if(flag_status == 1)
+            app_mic_record();
+
+        if (FALSE == audio_trigger_pin_is_pressed() && flag_status == 2) {
             tal_system_sleep(100);
+
+            // PR_DEBUG("stop");
 
             // End recording
             if (TRUE == sg_recorder_ctx.recording) {
@@ -453,7 +494,7 @@ static void app_recorder_thread(void *arg)
         }
 
         // Start recording
-        if (FALSE == sg_recorder_ctx.recording) {
+        if ((FALSE == sg_recorder_ctx.recording) && flag_status == 1) {
 #if (RECORDER_FILE_SOURCE == USE_INTERNAL_FLASH) || (RECORDER_FILE_SOURCE == USE_SD_CARD)
             // If recording file exists, delete it
             BOOL_T is_exist = FALSE;

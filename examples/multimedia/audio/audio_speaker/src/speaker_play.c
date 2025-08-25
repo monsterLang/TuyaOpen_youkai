@@ -53,7 +53,7 @@ struct speaker_mp3_ctx {
 
     uint32_t mp3_offset; // current mp3 read position
 
-    short *pcm_buf;
+    char *pcm_buf;
 };
 
 /***********************************************************
@@ -94,7 +94,7 @@ static void app_fs_init(void)
     }
 #endif
 
-    PR_DEBUG("mount inner flash success ");
+    PR_DEBUG("mount inner flash success %d", rt);
 
     return;
 }
@@ -163,7 +163,8 @@ static void app_speaker_play(void)
     int rt = 0;
     uint32_t head_offset = 0;
     unsigned char *mp3_frame_head = NULL;
-    uint32_t decode_size_remain = 0;
+    // uint32_t decode_size_remain = 0;
+    int decode_size_remain = 0;
     uint32_t read_size_remain = 0;
 
     if (sg_mp3_ctx.decode_hdl == NULL || sg_mp3_ctx.read_buf == NULL || sg_mp3_ctx.pcm_buf == NULL) {
@@ -256,7 +257,7 @@ static void app_speaker_play(void)
 
         mp3_frame_head = sg_mp3_ctx.read_buf + head_offset;
         decode_size_remain = sg_mp3_ctx.read_size - head_offset;
-        rt = MP3Decode(sg_mp3_ctx.decode_hdl, &mp3_frame_head, &decode_size_remain, sg_mp3_ctx.pcm_buf, 0);
+        rt = MP3Decode(sg_mp3_ctx.decode_hdl, &mp3_frame_head, &decode_size_remain, (short *)sg_mp3_ctx.pcm_buf, 0);
         if (rt != ERR_MP3_NONE) {
             PR_ERR("MP3Decode failed, code is %d", rt);
             break;

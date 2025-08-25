@@ -19,3 +19,13 @@ config UART_NUM0_RX_PIN
     default 44
     ---help---
         esp32-s3 default 44
+
+choice ESP32S3_BOARD_EX_MODULE
+    prompt "choose expansion module for esp32 s3"
+    default ESP32S3_BOARD_EX_MODULE_LCD_ST7735
+
+    config ESP32S3_BOARD_EX_MODULE_LCD_ST7735
+        bool "1.8 inch 128x160 rgb565 LCD"
+        select ENABLE_DISPLAY
+        select ENABLE_TOUCH
+endchoice
